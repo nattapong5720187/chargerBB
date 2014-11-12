@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import Adafruit_BBIO.UART as UART
+import serial
+import time 
+from time import sleep
+
+UART.setup("UART1")
+
+##ser = serial.Serial(port = "/dev/ttyO1", baudrate=115200, timeout=1,xonxoff=False,rtscts = False, bytesize= serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE)
+ser = serial.Serial(port = "/dev/ttyO4", baudrate=115200, timeout=1)
+
+ser.close()
+ser.open()
+
+cmd1 = 'AT+QHTTPCFG="contextid",1\r\n'
+cmd2 = 'AT+QHTTPCFG="responseheader",1\r\n'
+cmd3 = 'AT+QICSGP=1,1"internet","true","true",1\r\n'
+cmd4 = 'AT+QIACT=1\r\n'
+cmd5 = 'AT+QHTTPURL=23,80\r\n'
+cmd6 = 'http://www.google.co.th'
+cmd7 = 'AT+QHTTPGET=80\r\n'
+cmd8 = 'AT+QHTTPGET=0,200\r\n'
+cmd9 = 'AT+QHTTPREAD=80\r\n'
+
+cmd = [cmd1,cmd2,cmd3,cmd4,cmd5,cmd6,cmd7,cmd8,cmd9]
+
+ser.write('AT')
+time.sleep(1)
+print ser.readline()
+i=0
+while(1):
+	print ser.readline()
+
+#while(1):
+	
+#	if i < 9:
+#		time.sleep(1)
+#		ser.write(cmd[i])
+#		print cmd[i]
+#		time.sleep(1)
+#		ans = ser.readline()
+		#print ans[0:2]
+#		if ans[0:2] == "OK":
+#			print "OK"
+#			i=i+1
+#		else:
+#			print "again"
+			#print ser.readline()
+		#i=i+1	
+#	else:
+#		print ser.readline()
+	
