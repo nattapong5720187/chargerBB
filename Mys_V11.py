@@ -10,8 +10,16 @@ from time import sleep
 import Adafruit_BBIO.GPIO as GPIO
 import Tkinter as tk
 import os
+from websocket import create_connection
+import json
+from datetime import datetime
+time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 #GPIO.setup("P8_8",GPIO.IN)
+#Connect server
+#time.sleep(60)
+ws = create_connection("ws://192.168.73.85/ocpp/1")
+#ws = create_connection("ws://203.154.39.161:21001/ocpp_1_6/charger1/")
 
 
 UART.setup("UART2")
@@ -276,6 +284,7 @@ def readSerial():
 	global MysStartPrice2
 	global MysCkStop
 	global MysCkCardOO
+	global Check_Start
 
 	while True:
 		
@@ -320,7 +329,7 @@ def readSerial():
 				MysCK = 0  # Check D5
 				MysCkStop = 1
 				pic_main_start(1)
-				clear_card_label(1)
+				#clear_card_label(1)
 				root.update()
 				MysInsert = 0
 				MysCkWire = 0
@@ -344,13 +353,18 @@ def readSerial():
 				if MysCkCardOO >1:
 					clear_card_label(1)
 
-				if card_id == '2A958AAB' or card_id == '448A87AB' or card_id == '1A263C06' or card_id == 'E07E6915':
-					
+				ws.send('[2, "BQMYei0kseAoZ2aij7mbTs37UNGCFLhv", "Authorize", {"idTag":"'+ card_id +'"}]')
+				result = ws.recv()
+				result_json = json.loads(result)
+				print result_json
+				if result_json[2]['idTagInfo']['status'] == "Accepted":
+						amount = result_json[2]['idTagInfo']['amount']
+						name_user = result_json[2]['idTagInfo']['name']
 						card_show(1)
 
-						MysStartPrice = 3000.00
-						MysCardid = "Mr. Teratam Bunyagul"
-						MysText = "Assistant Professor"
+						MysStartPrice = amount
+						MysCardid = card_id
+						MysText = name_user
 						Mystype = "Prepaid"
 
 						varCard_id.set(MysCardid)
@@ -358,48 +372,23 @@ def readSerial():
 						varText.set(MysText)
 						varMoney.set(str(MysStartPrice))
 						varCard_type.set(Mystype)
-
+						
+						pic_ev_card(1)
+						root.update()
+						print "Card Correct\n"
+				
+						time.sleep(3)
+						MysInsert = 0
+						MysCkWire = 0
+						ser.write("CARD$1$end")	#Card correct
+						break
 
 				else:
-					
-					if card_id == '3AF41805' or card_id == '3A1C6206' or card_id == '20F689AB':
-						
-							card_show(1)
 
-							MysStartPrice = 3000.00
-							MysCardid = "Mr. Teratam Bunyagul"
-							MysText = "Assistant Professor"
-							Mystype = "Prepaid"
-
-							varCard_id.set(MysCardid)
-							varMysEnergy.set("")
-							varText.set(MysText)
-							varMoney.set(str(MysStartPrice))
-							varCard_type.set(Mystype)
-				
-					else:
-	
-							card_show(1)
-							MysStartPrice = 200.00
-							MysCardid = card_id
-							MysText = "Employee"
-							Mystype = "Prepaid"
-
-							varCard_id.set(MysCardid)
-							varMysEnergy.set("")
-							varText.set(MysText)
-							varMoney.set(str(MysStartPrice))
-							varCard_type.set(Mystype)
-
-				print "Card Correct\n"
-				pic_ev_card(1)
-				root.update()
-				
-				time.sleep(3)
-				MysInsert = 0
-				MysCkWire = 0
-				ser.write("CARD$1$end")	#Card correct
-				break
+						pic_ev_lnvalid(1)
+						root.update()
+						ser.write("RE$end")	#RESET Command
+						break
 				
 				
 			if message[0] == 'D3':   #Push Start
@@ -424,6 +413,7 @@ def readSerial():
 				root.update()
 				Mysinsert = 0
 				MysCkWire = 1
+				Check_Start = 1
 				print "Plug In\n"
 				break
 				
@@ -442,6 +432,15 @@ def readSerial():
 				#MysStartPrice2 = float(MysStartPrice-(float(price)/100.00))
 				MysStartPrice2 = float(MysStartPrice-(float(price)))
 				#MysStartPrice2 = 200
+				if Check_Start == 1:
+					ws.send('[2, "ZeERlwkKOEdm9qaCnTUpDXI95bxr1ot3", "StatusNotification", {"timestamp": "'+time_now+'", "status": "Charging", "connectorId": '+chargeType+', "errorCode": "NoError"}]')
+					result_json_status = json.loads(ws.recv())
+					print("Received : ", result_json_status)
+					ws.send('[2, "XHgRau8AcLOUezhYFvZWKMi83DeP1bvC", "StartTransaction", {"connectorId": '+chargeType+', "meterStart": 0, "idTag": "'+ MysCardid +'", "timestamp": "'+ time_now+'"}]')
+					result_json_start = json.loads(ws.recv())
+					transactionId = result_json_start[2]['transactionId']
+					print("Received : ", transactionId)
+					Check_Start = 0
 				
 				print "D5"	
 				
@@ -453,6 +452,12 @@ def readSerial():
 					
 					if MysCkStop == 1:
 						print "Show Card  Stop\n"
+						ws.send('[2, "ZeERlwkKOEdm9qaCnTUpDXI95bxr1ot3", "StatusNotification", {"timestamp": "'+time_now+'", "status": "Available", "connectorId": '+chargeType+', "errorCode": "NoError"}]')
+						receive_status_stop = json.loads(ws.recv())
+						print("Received : ",  receive_status_stop)
+						ws.send('[2, "xkgU2inssohvi7b3Im2BTjxZGkMEJgYk", "StopTransaction", {"transactionId": 1, "timestamp": "'+ time_now +'", "idTag": "'+ MysCardid +'","meterStop": '+energy+'}]')
+						receive_stop = json.loads(ws.recv())
+						print("Received : ",  receive_stop)
 						
 						clear_card_label(1)
 						card_show(1)
@@ -485,11 +490,13 @@ def readSerial():
 					else:
 						pass
 					
+					ws.send('[2, "uIDHeJPq6QESJEKY2Tu1qzimdxgfBQNW", "MeterValues", {"transactionId": 1, "connectorId": '+chargeType+', "meterValue": {"sampledValue": {"value": '+ energy +', "unit": "Wh"}}}]')
+					receive_Meter = json.loads(ws.recv())
+					print("Received : ", receive_Meter)
 					varCard_id.set(str(float(energy)))
 					varText.set(str(float(current)))
 					varMoney.set(str(float(price)))
 					varCard_type.set("")
-
 				
 					if rand == 1:
 						pic_ev_charge1(1)
@@ -541,5 +548,3 @@ root.bind('<Escape>',close)
 root.config(cursor='none')
 root.attributes('-fullscreen', True)
 root.mainloop()
-
-
