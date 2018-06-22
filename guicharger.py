@@ -210,7 +210,7 @@ def set_and_run(callback):
            root.after(100, callback)		
            root.bind('<Escape>',close)
            root.config(cursor='none')
-           root.attributes('-fullscreen', True)
+           root.attributes('-fullscreen', False)
            root.mainloop()
 
 def restart(delay,callback):
