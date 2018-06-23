@@ -43,7 +43,7 @@ def mian_start():
 	MysCkWire = 0
 	print "Tag Card\n"
 	
-def autentication(card_id):
+def check_autentication(card_id):
 	global MysStartPrice
 	global MysCardid
 	global MysText
@@ -54,32 +54,29 @@ def autentication(card_id):
 	ws.send('[2, "BQMYei0kseAoZ2aij7mbTs37UNGCFLhv", "Authorize", {"idTag":"'+ card_id +'"}]')
 	result = ws.recv()
 	result_json = json.loads(result)
-	print result_json
-	if result_json[2]['idTagInfo']['status'] == "Accepted":
-			amount = result_json[2]['idTagInfo']['amount']
-			name_user = result_json[2]['idTagInfo']['name']
+	return result_json
 			
-			gui.card_show(1)
+def autentication(card_id,amount,name_user):
+	gui.card_show(1)
 
-			MysStartPrice = amount
-			MysCardid = card_id
-			MysText = name_user
-			Mystype = "Prepaid"
-			
-			gui.set_energy(MysText,MysCardid,MysStartPrice,Mystype)
-
-			gui.pic_ev_card(1)
-			gui.update()
-			print "Card Correct\n"
+	MysStartPrice = amount
+	MysCardid = card_id
+	MysText = name_user
+	Mystype = "Prepaid"
 	
-			time.sleep(3)
-			ser.write("CARD$1$end")	#Card correct
+	gui.set_energy(MysText,MysCardid,MysStartPrice,Mystype)
 
-	else:
+	gui.pic_ev_card(1)
+	gui.update()
+	print "Card Correct\n"
 
-			gui.pic_ev_lnvalid(1)
-			gui.update()
-			ser.write("RE$end")	#RESET Command
+	time.sleep(3)
+	ser.write("CARD$1$end")	#Card correct
+
+def non_autentication():
+	gui.pic_ev_lnvalid(1)
+	gui.update()
+	ser.write("RE$end")	#RESET Command
 			
 def push_start():
 	gui.pic_ev_start(1)   #Push Start
@@ -183,6 +180,7 @@ def reservation():
 	if recv[0] == 2:
 		reserv = recv[3]['idTag']
 		exp = recv[3]['expiryDate']
+		ws.send('[3, "ZeERlwkKOEdm9qaCnTUpDXI95bxr1ot3",{"status":"Accepted"}]')
 		print reserv
 		print exp
 		
@@ -244,7 +242,14 @@ def readSerial():
 			
 			if message[0] == 'D2' and length_message ==3:	#Show Card
 				card_id = message[1]
-				autentication(card_id)
+				keep_auten = check_autentication(card_id)
+				if keep_auten[2]['idTagInfo']['status'] == "Accepted":
+					amount = keep_auten[2]['idTagInfo']['amount']
+					name_user = keep_auten[2]['idTagInfo']['name']
+					autentication(card_id,amount,name_user)
+				else:
+					non_autentication()
+					
 				break
 				
 				
