@@ -32,8 +32,6 @@ Mystype = "Prepaid"
 MysCkCardOO = 0
 transactionId = 0
 status_reserv = 0
-check_reser = ""
-stop_heartbeat = 1
 reserv_id = ""
 
 ser = serial.Serial(port = "/dev/ttyO2", baudrate=115200, timeout=1)
@@ -179,13 +177,12 @@ def stopTransaction(time_now,chargeType,energy,MysStartPrice2):
 	
 def heartbeat():
 	global status_reserv
-	global stop_heartbeat
 	global reserv_id
 	unique_random = binascii.b2a_hex(os.urandom(20))
 	ws.send('[2, "'+unique_random+'", "Heartbeat", {}]')
 	receive_heartbeat = json.loads(ws.recv())
 	print receive_heartbeat
-	if receive_heartbeat[0] == 2:
+	if receive_heartbeat[0] == 2 and receive_heartbeat[2] == "ReserveNow":
 		reserv_id = receive_heartbeat[3]['idTag']
 		uniqueId = receive_heartbeat[1]
 		ws.send('[3, "'+uniqueId+'",{"status":"Accepted"}]')
@@ -194,7 +191,14 @@ def heartbeat():
 		gui.pic_ev_reservation(1)
 		gui.update()
 		status_reserv = 1
-		stop_heartbeat = 0
+	elif receive_heartbeat[0] == 2 and receive_heartbeat[2] == "CancelReservation":
+		uniqueId = receive_heartbeat[1]
+		ws.send('[3, "'+uniqueId+'",{"status":"Accepted"}]')
+		receive = json.loads(ws.recv())
+		print receive
+		mian_start()
+		reserv_id = ""
+		status_reserv = 0
 		
 def timer90():
 	global MysCkWire
@@ -269,8 +273,6 @@ def readSerial():
 					name_user = keep_auten[2]['idTagInfo']['name']
 					autentication(card_id,amount,name_user)
 					status_reserv = 0
-					check_reser = ""
-					status_reserv = 0
 					reserv_id = ""
 				elif keep_auten[2]['idTagInfo']['status'] == "Accepted" and status_reserv == 0:
 					amount = keep_auten[2]['idTagInfo']['amount']
@@ -316,7 +318,4 @@ def readSerial():
 					break
 				
 	gui.restart(10, readSerial)
-	
-
-
 gui.set_and_run(readSerial)
