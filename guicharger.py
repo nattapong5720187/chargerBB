@@ -19,6 +19,7 @@ ev_main_stop = Image.open("/home/debian/geany_bbb/ev_pic/ev_main_stop.jpg")
 ev_stop = Image.open("/home/debian/geany_bbb/ev_pic/ev_btn_stop.jpg")
 ev_remove_wire = Image.open("/home/debian/geany_bbb/ev_pic/ev_remove_wire0.jpg")
 ev_lnvalid = Image.open("/home/debian/geany_bbb/ev_pic/ev_Invalid.jpg")
+ev_reservation = Image.open("/home/debian/geany_bbb/ev_pic/Reservation.jpg")
 
 ## ImageTk Library
 photo_main_start = ImageTk.PhotoImage(ev_main_start)
@@ -31,6 +32,7 @@ photo_ev_main_stop = ImageTk.PhotoImage(ev_main_stop)
 photo_ev_stop = ImageTk.PhotoImage(ev_stop)
 photo_remove_wire = ImageTk.PhotoImage(ev_remove_wire)
 photo_lnvalid = ImageTk.PhotoImage(ev_lnvalid)
+photo_reservation = ImageTk.PhotoImage(ev_reservation)
 
 ## Add image to Array
 my_images = []
@@ -44,6 +46,7 @@ my_images.append(photo_ev_main_stop)  #Array 6
 my_images.append(photo_ev_stop)       #Array 7
 my_images.append(photo_remove_wire)   #Array 8
 my_images.append(photo_lnvalid)       #Array 9
+my_images.append(photo_reservation)       #Array 10
 canvas = None
 
 def pic_main_start(evant):
@@ -85,6 +88,10 @@ def pic_ev_remove_wire(evant):
 def pic_ev_lnvalid(evant):
 	
 	w.itemconfig(canvas, image = my_images[9])
+	
+def pic_ev_reservation(evant):
+	
+	w.itemconfig(canvas, image = my_images[10])
 
 	
 def card_show(evant):

@@ -6,7 +6,7 @@ import serial
 import time 
 from time import sleep
 import Adafruit_BBIO.GPIO as GPIO
-import os
+import os,binascii
 from websocket import create_connection
 import json
 from datetime import datetime
@@ -31,6 +31,10 @@ MysText = "Employee"
 Mystype = "Prepaid"
 MysCkCardOO = 0
 transactionId = 0
+status_reserv = 0
+check_reser = ""
+stop_heartbeat = 1
+reserv_id = ""
 
 ser = serial.Serial(port = "/dev/ttyO2", baudrate=115200, timeout=1)
 
@@ -52,11 +56,14 @@ def check_autentication(card_id):
 	print "Show Card\n"
 	print card_id
 	ws.send('[2, "BQMYei0kseAoZ2aij7mbTs37UNGCFLhv", "Authorize", {"idTag":"'+ card_id +'"}]')
-	result = ws.recv()
-	result_json = json.loads(result)
+	result_json = json.loads(ws.recv())
 	return result_json
 			
 def autentication(card_id,amount,name_user):
+	global MysCardid
+	global MysText
+	global Mystype
+	global MysStartPrice
 	gui.card_show(1)
 
 	MysStartPrice = amount
@@ -171,18 +178,23 @@ def stopTransaction(time_now,chargeType,energy,MysStartPrice2):
 	ser.write("CARD$1$end")	#Card correct
 	
 def heartbeat():
-	ws.send('[2, "ZeERlwkKOEdm9qaCnTUpDXI95bxr1ot3", "Heartbeat", {}]')
+	global status_reserv
+	global stop_heartbeat
+	global reserv_id
+	unique_random = binascii.b2a_hex(os.urandom(20))
+	ws.send('[2, "'+unique_random+'", "Heartbeat", {}]')
 	receive_heartbeat = json.loads(ws.recv())
-	return receive_heartbeat
-	
-def reservation():
-	recv = heartbeat()
-	if recv[0] == 2:
-		reserv = recv[3]['idTag']
-		exp = recv[3]['expiryDate']
-		ws.send('[3, "ZeERlwkKOEdm9qaCnTUpDXI95bxr1ot3",{"status":"Accepted"}]')
-		print reserv
-		print exp
+	print receive_heartbeat
+	if receive_heartbeat[0] == 2:
+		reserv_id = receive_heartbeat[3]['idTag']
+		uniqueId = receive_heartbeat[1]
+		ws.send('[3, "'+uniqueId+'",{"status":"Accepted"}]')
+		receive = json.loads(ws.recv())
+		print receive
+		gui.pic_ev_reservation(1)
+		gui.update()
+		status_reserv = 1
+		stop_heartbeat = 0
 		
 def timer90():
 	global MysCkWire
@@ -217,14 +229,16 @@ def switch_pic_charging():
 def readSerial():
 	global MysCK
 	global MysStartPrice
-	global MysCkCardOO 
+	global MysCkCardOO
+	global status_reserv
+	global check_reser 
+	global stop_heartbeat
+	global reserv_id
 
 	while True:
 		time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 		serBuffer = ser.readline()
 		heartbeat()
-		reservation()
-		time.sleep(1)
 				
 		if len(serBuffer) == 0:
 			timer90()
@@ -235,15 +249,30 @@ def readSerial():
 			message = serBuffer.split('$')
 			length_message = len(message)
 			
-			if message[0] == 'D1':   #Tag Card
+			if message[0] == 'D1'and status_reserv == 0:   #Tag Card
 				mian_start()
-				break
+				break	
 				
+			elif message[0] == 'D1' and status_reserv == 1:   #Tag Card
+				gui.pic_ev_reservation(1)
+				gui.update()
+				break		
 			
-			if message[0] == 'D2' and length_message ==3:	#Show Card
+			elif message[0] == 'D2' and length_message ==3:	#Show Card
 				card_id = message[1]
 				keep_auten = check_autentication(card_id)
-				if keep_auten[2]['idTagInfo']['status'] == "Accepted":
+				print status_reserv
+				print keep_auten
+				print reserv_id
+				if keep_auten[2]['idTagInfo']['status'] == "Accepted" and reserv_id == card_id and status_reserv == 1:
+					amount = keep_auten[2]['idTagInfo']['amount']
+					name_user = keep_auten[2]['idTagInfo']['name']
+					autentication(card_id,amount,name_user)
+					status_reserv = 0
+					check_reser = ""
+					status_reserv = 0
+					reserv_id = ""
+				elif keep_auten[2]['idTagInfo']['status'] == "Accepted" and status_reserv == 0:
 					amount = keep_auten[2]['idTagInfo']['amount']
 					name_user = keep_auten[2]['idTagInfo']['name']
 					autentication(card_id,amount,name_user)
@@ -253,15 +282,15 @@ def readSerial():
 				break
 				
 				
-			if message[0] == 'D3':   #Push Start
+			elif message[0] == 'D3':   #Push Start
 				push_start()
 				break
 				
-			if message[0] == 'D4':	#Plug In
+			elif message[0] == 'D4':	#Plug In
 				plug_In()
 				break
 				
-			if message[0] == 'D5' and length_message == 8:	#Energy
+			elif message[0] == 'D5' and length_message == 8:	#Energy
 				MysCK = MysCK + 1
 				energy = message[1]
 				current = message[2]

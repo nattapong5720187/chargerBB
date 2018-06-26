@@ -9,10 +9,9 @@ import time
 from time import sleep
 import Adafruit_BBIO.GPIO as GPIO
 import Tkinter as tk
-import os
+import os,binascii
 
 #GPIO.setup("P8_8",GPIO.IN)
-
 
 UART.setup("UART2")
 #UART.setup("UART4")
@@ -539,5 +538,5 @@ root.bind('<Escape>',close)
 #root.bind('<F2>',pic_smile)
 #root.bind('<F3>',pic_frown)
 root.config(cursor='none')
-root.attributes('-fullscreen', True)
+root.attributes('-fullscreen', False)
 root.mainloop()
