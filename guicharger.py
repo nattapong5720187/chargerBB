@@ -19,7 +19,7 @@ ev_main_stop = Image.open("/home/debian/geany_bbb/ev_pic/ev_main_stop.jpg")
 ev_stop = Image.open("/home/debian/geany_bbb/ev_pic/ev_btn_stop.jpg")
 ev_remove_wire = Image.open("/home/debian/geany_bbb/ev_pic/ev_remove_wire0.jpg")
 ev_lnvalid = Image.open("/home/debian/geany_bbb/ev_pic/ev_Invalid.jpg")
-ev_reservation = Image.open("/home/debian/geany_bbb/ev_pic/Reservation.jpg")
+ev_reservation = Image.open("/home/debian/geany_bbb/ev_pic/ev_reservation.jpg")
 
 ## ImageTk Library
 photo_main_start = ImageTk.PhotoImage(ev_main_start)
